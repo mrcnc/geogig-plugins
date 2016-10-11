@@ -108,7 +108,7 @@ public class OSMMapOp extends AbstractGeoGigOp<RevTree> {
         Iterator<Feature> iterator = Iterators.concat(nodes, ways);
 
         if (iterator.hasNext()) {
-            FeatureMapFlusher insertsByParent = new FeatureMapFlusher(workingTree());
+            FeatureMapFlusher insertsByParent = new FeatureMapFlusher(repository());
             while (iterator.hasNext()) {
                 Feature feature = iterator.next();
                 List<MappedFeature> mappedFeatures = mapping.map(feature);

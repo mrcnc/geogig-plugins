@@ -17,6 +17,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -24,14 +26,22 @@ import java.util.concurrent.TimeUnit;
 import org.eclipse.jdt.annotation.Nullable;
 import org.locationtech.geogig.hooks.Hookable;
 import org.locationtech.geogig.model.ObjectId;
+import org.locationtech.geogig.model.RevFeatureBuilder;
+import org.locationtech.geogig.model.RevFeatureType;
+import org.locationtech.geogig.model.RevFeatureTypeBuilder;
 import org.locationtech.geogig.porcelain.AddOp;
 import org.locationtech.geogig.porcelain.CommitOp;
 import org.locationtech.geogig.repository.AbstractGeoGigOp;
+import org.locationtech.geogig.repository.FeatureInfo;
+import org.locationtech.geogig.repository.FeatureToDelete;
+import org.locationtech.geogig.repository.NodeRef;
 import org.locationtech.geogig.repository.Platform;
 import org.locationtech.geogig.repository.ProgressListener;
 import org.locationtech.geogig.repository.SubProgressListener;
 import org.locationtech.geogig.repository.WorkingTree;
+import org.locationtech.geogig.storage.ObjectDatabase;
 import org.opengis.feature.Feature;
+import org.opengis.feature.type.FeatureType;
 import org.openstreetmap.osmosis.core.OsmosisRuntimeException;
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
 import org.openstreetmap.osmosis.core.domain.v0_6.Entity;
@@ -55,6 +65,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import com.vividsolutions.jts.geom.CoordinateSequence;
@@ -63,6 +74,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.geom.PrecisionModel;
+
 import crosby.binary.osmosis.OsmosisReader;
 
 /**
@@ -334,15 +346,32 @@ public class OSMImportOp extends AbstractGeoGigOp<Optional<OSMReport>> {
 
         // used to set the task status name, but report no progress so it does not interfere
         // with the progress reported by the reader thread
-        SubProgressListener noPorgressReportingListener = new SubProgressListener(progressListener,
+        SubProgressListener noProgressReportingListener = new SubProgressListener(progressListener,
                 0) {
             @Override
             public void setProgress(float progress) {
                 // no-op
             }
         };
+        
+        final ObjectDatabase objectDatabase = objectDatabase();
+    	Map<FeatureType, RevFeatureType> types = new HashMap<>();
+        Iterator<FeatureInfo> finfos = Iterators.transform(iterator, (f) -> {
+            FeatureType ft = f.getType();
+            RevFeatureType rft = types.get(ft);
+            if (rft == null) {
+                rft = RevFeatureTypeBuilder.build(ft);
+                types.put(ft, rft);
+                objectDatabase.put(rft);
+            }
+            String featurePath = NodeRef.appendChild(parentTreePathResolver.apply(f), f.getIdentifier().getID());
+            if (f instanceof FeatureToDelete) {
+            	return FeatureInfo.delete(featurePath);
+            }
+            return FeatureInfo.insert(RevFeatureBuilder.build(f), rft.getId(), featurePath);
+        });
 
-        workTree.insert(parentTreePathResolver, iterator, noPorgressReportingListener, null, null);
+        workingTree().insert(finfos, noProgressReportingListener);
 
         if (sink.getCount() == 0) {
             throw new EmptyOSMDownloadException();

@@ -9,17 +9,24 @@
  */
 package com.boundlessgeo.geogig.osm.internal;
 
+import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.locationtech.geogig.model.RevFeatureBuilder;
+import org.locationtech.geogig.model.RevFeatureType;
+import org.locationtech.geogig.model.RevFeatureTypeBuilder;
 import org.locationtech.geogig.repository.DefaultProgressListener;
-import org.locationtech.geogig.repository.ProgressListener;
-import org.locationtech.geogig.repository.WorkingTree;
-import org.opengis.feature.Feature;
+import org.locationtech.geogig.repository.FeatureInfo;
+import org.locationtech.geogig.repository.FeatureToDelete;
+import org.locationtech.geogig.repository.NodeRef;
+import org.locationtech.geogig.repository.Repository;
 import org.opengis.feature.simple.SimpleFeature;
+import org.opengis.feature.type.FeatureType;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterators;
 
 /**
  * A buffer that wraps a multimap to store features, that flushes when a certain limit is reached.
@@ -35,12 +42,12 @@ public class FeatureMapFlusher {
 
     private HashMultimap<String, SimpleFeature> map;
 
-    private WorkingTree workTree;
+    private Repository repository;
 
     private int count;
 
-    public FeatureMapFlusher(WorkingTree workTree) {
-        this.workTree = workTree;
+    public FeatureMapFlusher(Repository repository) {
+        this.repository = repository;
         map = HashMultimap.create();
         count = 0;
     }
@@ -57,11 +64,23 @@ public class FeatureMapFlusher {
     private void flush(String path) {
         Set<SimpleFeature> features = map.get(path);
         if (!features.isEmpty()) {
-            Iterator<? extends Feature> iterator = features.iterator();
-            ProgressListener listener = new DefaultProgressListener();
-            List<org.locationtech.geogig.model.Node> insertedTarget = null;
-            Integer collectionSize = Integer.valueOf(features.size());
-            workTree.insert(path, iterator, listener, insertedTarget, collectionSize);
+        	Map<FeatureType, RevFeatureType> types = new HashMap<>();
+            Iterator<FeatureInfo> finfos = Iterators.transform(features.iterator(), (f) -> {
+                FeatureType ft = f.getType();
+                RevFeatureType rft = types.get(ft);
+                if (rft == null) {
+                    rft = RevFeatureTypeBuilder.build(ft);
+                    types.put(ft, rft);
+                    repository.objectDatabase().put(rft);
+                }
+                String featurePath = NodeRef.appendChild(path, f.getIdentifier().getID());
+                if (f instanceof FeatureToDelete) {
+                	return FeatureInfo.delete(featurePath);
+                }
+                return FeatureInfo.insert(RevFeatureBuilder.build(f), rft.getId(), featurePath);
+            });
+
+            repository.workingTree().insert(finfos, DefaultProgressListener.NULL);
         }
     }
 
