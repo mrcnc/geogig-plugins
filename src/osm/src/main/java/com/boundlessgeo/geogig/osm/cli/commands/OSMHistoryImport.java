@@ -17,6 +17,7 @@ import static com.boundlessgeo.geogig.osm.internal.OSMUtils.wayType;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.locationtech.geogig.model.ObjectId;
 import org.locationtech.geogig.model.Ref;
 import org.locationtech.geogig.model.RevCommit;
 import org.locationtech.geogig.model.RevFeature;
+import org.locationtech.geogig.model.RevFeatureBuilder;
 import org.locationtech.geogig.model.RevFeatureType;
 import org.locationtech.geogig.model.RevFeatureTypeBuilder;
 import org.locationtech.geogig.model.RevTree;
@@ -56,6 +58,7 @@ import org.locationtech.geogig.porcelain.AddOp;
 import org.locationtech.geogig.porcelain.CommitOp;
 import org.locationtech.geogig.repository.DefaultProgressListener;
 import org.locationtech.geogig.repository.DiffObjectCount;
+import org.locationtech.geogig.repository.FeatureInfo;
 import org.locationtech.geogig.repository.GeoGIG;
 import org.locationtech.geogig.repository.NodeRef;
 import org.locationtech.geogig.repository.Platform;
@@ -69,6 +72,7 @@ import org.locationtech.geogig.storage.ObjectStore;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.FeatureType;
 
 import com.beust.jcommander.Parameters;
 import com.beust.jcommander.ParametersDelegate;
@@ -86,6 +90,7 @@ import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -430,15 +435,25 @@ public class OSMHistoryImport extends AbstractCommand implements CLICommand {
             if (features.isEmpty()) {
                 continue;
             }
+            
+            Map<FeatureType, RevFeatureType> types = new HashMap<>();
+            Iterator<FeatureInfo> finfos = Iterators.transform(features.iterator(), (f) -> {
+                FeatureType ft = f.getType();
+                RevFeatureType rft = types.get(ft);
+                if (rft == null) {
+                    rft = RevFeatureTypeBuilder.build(ft);
+                    types.put(ft, rft);
+                    repository.objectDatabase().put(rft);
+                }
+                String path = NodeRef.appendChild(parentPath, f.getIdentifier().getID());
+                FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(f), rft.getId(), path);
+                return fi;
+            });
 
-            Iterator<? extends Feature> iterator = features.iterator();
-            ProgressListener listener = new DefaultProgressListener();
-            List<org.locationtech.geogig.model.Node> insertedTarget = null;
-            Integer collectionSize = Integer.valueOf(features.size());
-            workTree.insert(parentPath, iterator, listener, insertedTarget, collectionSize);
+            workTree.insert(finfos, DefaultProgressListener.NULL);
         }
         if (!deletes.isEmpty()) {
-            workTree.delete(deletes.iterator());
+            workTree.delete(deletes.iterator(), DefaultProgressListener.NULL);
         }
         return cnt;
     }

@@ -20,12 +20,16 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.locationtech.geogig.model.FieldType;
 import org.locationtech.geogig.model.RevFeature;
+import org.locationtech.geogig.model.RevFeatureBuilder;
 import org.locationtech.geogig.model.RevFeatureType;
+import org.locationtech.geogig.model.RevFeatureTypeBuilder;
 import org.locationtech.geogig.plumbing.ResolveFeatureType;
 import org.locationtech.geogig.plumbing.ResolveGeogigDir;
 import org.locationtech.geogig.plumbing.RevObjectParse;
 import org.locationtech.geogig.porcelain.AddOp;
 import org.locationtech.geogig.porcelain.CommitOp;
+import org.locationtech.geogig.repository.FeatureInfo;
+import org.locationtech.geogig.repository.NodeRef;
 import org.locationtech.geogig.test.integration.RepositoryTestCase;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
@@ -105,7 +109,9 @@ public class OSMHookTest extends RepositoryTestCase {
         fb.set("name", "newname");
         fb.set("id", 507464799l);
         SimpleFeature newFeature = fb.buildFeature("507464799");
-        geogig.getRepository().workingTree().insert("busstops", newFeature);
+        String path = NodeRef.appendChild("busstops", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
         geogig.command(AddOp.class).call();
         geogig.command(CommitOp.class).setMessage("msg").call(); // this should trigger the hook
 

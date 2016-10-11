@@ -4,10 +4,9 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.boundlessgeo</groupId>
-    <artifactId>geogig-plugins</artifactId>
+    <groupId>org.geogig</groupId>
+    <artifactId>storage</artifactId>
     <version>1.0-SNAPSHOT</version>
-    <relativePath>../../parent/pom.xml</relativePath>
   </parent>
 
   <artifactId>geogig-plugins-bdbje</artifactId>
@@ -51,7 +50,6 @@
     <dependency>
       <groupId>com.sleepycat</groupId>
       <artifactId>je</artifactId>
-      <version>5.0.84</version>
     </dependency>
 
     <!-- Test scope dependencies -->
@@ -80,5 +78,14 @@
   </dependencies>
 
   <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <finalName>geogig-plugins-bdbje-${project.version}</finalName>
+          <skipAssembly>false</skipAssembly>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 </project>

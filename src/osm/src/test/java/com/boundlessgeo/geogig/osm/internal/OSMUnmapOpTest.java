@@ -20,11 +20,14 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.locationtech.geogig.model.FieldType;
 import org.locationtech.geogig.model.RevFeature;
+import org.locationtech.geogig.model.RevFeatureBuilder;
 import org.locationtech.geogig.model.RevFeatureType;
 import org.locationtech.geogig.plumbing.ResolveFeatureType;
 import org.locationtech.geogig.plumbing.RevObjectParse;
 import org.locationtech.geogig.porcelain.AddOp;
 import org.locationtech.geogig.porcelain.CommitOp;
+import org.locationtech.geogig.repository.FeatureInfo;
+import org.locationtech.geogig.repository.NodeRef;
 import org.locationtech.geogig.repository.WorkingTree;
 import org.locationtech.geogig.test.integration.RepositoryTestCase;
 import org.opengis.feature.simple.SimpleFeature;
@@ -99,7 +102,9 @@ public class OSMUnmapOpTest extends RepositoryTestCase {
         fb.set("id", 31347480l);
         fb.set("nodes", values.get(3).get());
         SimpleFeature newFeature = fb.buildFeature("31347480");
-        geogig.getRepository().workingTree().insert("residential", newFeature);
+        String path = NodeRef.appendChild("residential", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
         Optional<RevFeature> mapped = geogig.command(RevObjectParse.class)
                 .setRefSpec("WORK_HEAD:residential/31347480").call(RevFeature.class);
         assertTrue(mapped.isPresent());
@@ -254,7 +259,9 @@ public class OSMUnmapOpTest extends RepositoryTestCase {
         fb.set("name", "newname");
         fb.set("id", 507464799l);
         SimpleFeature newFeature = fb.buildFeature("507464799");
-        geogig.getRepository().workingTree().insert("busstops", newFeature);
+        String path = NodeRef.appendChild("busstops", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
 
         // check that it was correctly inserted in the working tree
         Optional<RevFeature> mapped = geogig.command(RevObjectParse.class)
@@ -393,7 +400,9 @@ public class OSMUnmapOpTest extends RepositoryTestCase {
         fb.set("name_alias", "newname");
         fb.set("id", 507464799l);
         SimpleFeature newFeature = fb.buildFeature("507464799");
-        geogig.getRepository().workingTree().insert("busstops", newFeature);
+        String path = NodeRef.appendChild("busstops", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
 
         // check that it was correctly inserted in the working tree
         Optional<RevFeature> mapped = geogig.command(RevObjectParse.class)
@@ -482,7 +491,9 @@ public class OSMUnmapOpTest extends RepositoryTestCase {
 
         fb.set("timestamp", 1355097351000l);
         SimpleFeature newFeature = fb.buildFeature("507464799");
-        geogig.getRepository().workingTree().insert("busstops", newFeature);
+        String path = NodeRef.appendChild("busstops", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
 
         // check that it was correctly inserted in the working tree
         Optional<RevFeature> mapped = geogig.command(RevObjectParse.class)
@@ -577,7 +588,9 @@ public class OSMUnmapOpTest extends RepositoryTestCase {
         fb.set("id", 31347480l);
         fb.set("nodes", values.get(3).get());
         SimpleFeature newFeature = fb.buildFeature("31347480");
-        geogig.getRepository().workingTree().insert("residential", newFeature);
+        String path = NodeRef.appendChild("residential", newFeature.getIdentifier().getID());
+        FeatureInfo fi = FeatureInfo.insert(RevFeatureBuilder.build(newFeature), featureType.get().getId(), path);
+        geogig.getRepository().workingTree().insert(fi);
         Optional<RevFeature> mapped = geogig.command(RevObjectParse.class)
                 .setRefSpec("WORK_HEAD:residential/31347480").call(RevFeature.class);
         assertTrue(mapped.isPresent());

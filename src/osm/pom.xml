@@ -4,7 +4,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>com.boundlessgeo</groupId>
+    <groupId>org.geogig</groupId>
     <artifactId>geogig-plugins</artifactId>
     <version>1.0-SNAPSHOT</version>
     <relativePath>../parent/pom.xml</relativePath>
@@ -73,7 +73,7 @@
     <dependency>
       <groupId>org.codehaus.woodstox</groupId>
       <artifactId>woodstox-core-asl</artifactId>
-      <version>4.2.0</version>
+      <version>${woodstox.version}</version>
       <exclusions>
         <exclusion>
           <groupId>javax.xml.stream</groupId>
@@ -142,8 +142,8 @@
       <classifier>tests</classifier>
     </dependency>
     <dependency>
-      <groupId>org.locationtech.geogig</groupId>
-      <artifactId>geogig-bdbje</artifactId>
+      <groupId>org.geogig</groupId>
+      <artifactId>geogig-plugins-bdbje</artifactId>
       <version>${project.version}</version>
       <classifier>tests</classifier>
       <scope>test</scope>
@@ -164,7 +164,17 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
+  
   <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <configuration>
+          <finalName>geogig-plugins-osm-${project.version}</finalName>
+          <skipAssembly>false</skipAssembly>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
+
 </project>

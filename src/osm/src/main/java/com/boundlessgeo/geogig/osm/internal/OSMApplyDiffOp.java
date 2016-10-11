@@ -13,22 +13,30 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.eclipse.jdt.annotation.Nullable;
+import org.locationtech.geogig.model.RevFeatureBuilder;
+import org.locationtech.geogig.model.RevFeatureType;
+import org.locationtech.geogig.model.RevFeatureTypeBuilder;
 import org.locationtech.geogig.plumbing.FindTreeChild;
 import org.locationtech.geogig.repository.AbstractGeoGigOp;
 import org.locationtech.geogig.repository.Context;
+import org.locationtech.geogig.repository.FeatureInfo;
 import org.locationtech.geogig.repository.FeatureToDelete;
 import org.locationtech.geogig.repository.NodeRef;
 import org.locationtech.geogig.repository.Platform;
 import org.locationtech.geogig.repository.ProgressListener;
 import org.locationtech.geogig.repository.SubProgressListener;
 import org.locationtech.geogig.repository.WorkingTree;
+import org.locationtech.geogig.storage.ObjectDatabase;
 import org.opengis.feature.Feature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.feature.type.FeatureType;
 import org.openstreetmap.osmosis.core.OsmosisRuntimeException;
 import org.openstreetmap.osmosis.core.container.v0_6.ChangeContainer;
 import org.openstreetmap.osmosis.core.container.v0_6.EntityContainer;
@@ -47,6 +55,7 @@ import com.boundlessgeo.geogig.osm.internal.coordcache.PointCache;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.vividsolutions.jts.geom.CoordinateSequence;
 import com.vividsolutions.jts.geom.Envelope;
@@ -101,8 +110,6 @@ public class OSMApplyDiffOp extends AbstractGeoGigOp<Optional<OSMReport>> {
     }
 
     public OSMReport parseDiffFileAndInsert() {
-        final WorkingTree workTree = workingTree();
-
         final int queueCapacity = 100 * 1000;
         final int timeout = 1;
         final TimeUnit timeoutUnit = TimeUnit.SECONDS;
@@ -134,8 +141,26 @@ public class OSMApplyDiffOp extends AbstractGeoGigOp<Optional<OSMReport>> {
 
         final Function<Feature, String> parentTreePathResolver = (f) -> f.getType().getName()
                 .getLocalPart();
+        
+        final ObjectDatabase objectDatabase = objectDatabase();
+        
+    	Map<FeatureType, RevFeatureType> types = new HashMap<>();
+        Iterator<FeatureInfo> finfos = Iterators.transform(target, (f) -> {
+            FeatureType ft = f.getType();
+            RevFeatureType rft = types.get(ft);
+            if (rft == null) {
+                rft = RevFeatureTypeBuilder.build(ft);
+                types.put(ft, rft);
+                objectDatabase.put(rft);
+            }
+            String featurePath = NodeRef.appendChild(parentTreePathResolver.apply(f), f.getIdentifier().getID());
+            if (f instanceof FeatureToDelete) {
+            	return FeatureInfo.delete(featurePath);
+            }
+            return FeatureInfo.insert(RevFeatureBuilder.build(f), rft.getId(), featurePath);
+        });
 
-        workTree.insert(parentTreePathResolver, target, noProgressReportingListener, null, null);
+        workingTree().insert(finfos, noProgressReportingListener);
 
         OSMReport report = new OSMReport(sink.getCount(), sink.getNodeCount(), sink.getWayCount(),
                 sink.getUnprocessedCount(), sink.getLatestChangeset(), sink.getLatestTimestamp());
