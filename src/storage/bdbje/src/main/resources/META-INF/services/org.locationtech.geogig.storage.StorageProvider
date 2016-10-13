@@ -1,2 +1,2 @@
-org.locationtech.geogig.storage.bdbje.JEStorageProviderV01
-org.locationtech.geogig.storage.bdbje.JEStorageProviderV02
+org.geogig.storage.bdbje.JEStorageProviderV01
+org.geogig.storage.bdbje.JEStorageProviderV02
