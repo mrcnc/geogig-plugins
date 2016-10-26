@@ -1,0 +1,102 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
+import "geojson.proto";
+
+option java_multiple_files = true;
+option java_package = "org.geogig.grpc";
+option java_outer_classname = "GeoGigProto";
+option objc_class_prefix = "GG";
+
+package grpc;
+
+service GeoGigService {
+  rpc CreateRepo (CreateRepoRequest) returns (CreateRepoResponse) {}
+  rpc ImportData (ImportRequest) returns (stream ImportResponse) {}
+  rpc ExportGeoPackage (ExportRequest) returns (stream ExportResponse) {}
+  rpc SyncFeatures (stream SyncFeatureRequest) returns (stream SyncFeatureResponse) {}
+}
+
+message CreateRepoRequest {
+  string repoName = 1;
+  string userName = 2;
+  string userEmail = 3;
+  PostgreSQLConnection connection = 4;
+  // should we also allow (or require) data import request here?  why not combine them?
+}
+message CreateRepoResponse {
+  bool   success = 1;
+  string repoName = 2;
+  string errorMessage = 3;
+}
+
+
+message ImportRequest {
+  string dataSourceType = 1;
+  string destinationTreePath = 2;
+  DataSource dataSource = 3;
+}
+message ImportResponse {
+  bool   success = 1;
+  string repoName = 2;
+  string errorMessage = 3;
+  Task task = 4;
+}
+
+message ExportRequest {
+  string repoName = 1; // name of repository to export from
+  string refSpec = 2; // branch name or commit identifier to export from
+  string bbox = 3; // bounding box filter as minx,miny,maxx,maxy,<SRS>
+}
+message ExportResponse {
+  bool   success = 1;
+  string errorMessage = 2;
+  Task task = 4; // task.result.href has the link to download the geopackage
+}
+
+message SyncFeatureRequest {
+  string repoName = 1;
+  string commitId = 2;
+  string tree = 3; // the working tree the feature belongs to
+  FeatureOperation operation = 4;
+}
+message SyncFeatureResponse {
+  bool   success = 1;
+  string featureId = 2;
+  string commitId = 3;
+}
+message FeatureOperation {
+  string featureId = 1; // the geogig feature id
+  int32 auditOp = 2;
+  string auditTimestamp = 3;
+  google.protobuf.Struct properties = 4;
+}
+
+
+// common message types (put these in their own file?)
+message PostgreSQLConnection {
+  string dbHost = 1;
+  int32  dbPort = 2;
+  string dbName = 3;
+  string dbUser = 4;
+  string dbPassword = 5;
+  string dbSchema = 6;
+}
+
+message DataSource {
+  string sourceName = 1;
+  string host = 2;
+  int32  port = 3;
+  string schema = 4;
+  string database = 5;
+  string user = 6;
+  string password = 7;
+}
+
+message Task {
+  int32  taskId = 1;
+  string status = 2;
+  string description = 3;
+  string transactionId = 4;
+  google.protobuf.Any result = 5;
+}

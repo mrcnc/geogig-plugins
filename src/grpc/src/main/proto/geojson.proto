@@ -1,0 +1,36 @@
+// protobuf for geojson feature format https://tools.ietf.org/html/rfc7946
+syntax = "proto3";
+import "google/protobuf/struct.proto";
+package grpc;
+
+// message GeoJSON {
+//   oneof type {
+//     GeoJsonType type = 1;
+//     GeometryType type = 2;
+//   }
+// }
+//
+// enum GeoJsonType {
+//   FEATURE = 1;
+//   FEATURECOLLECTION = 2;
+// }
+
+enum GeometryType {
+  POINT = 0;
+  MULTIPOINT = 1;
+  LINESTRING = 2;
+  MULTILINESTRING = 3;
+  POLYGON = 4;
+  MULTIPOLYGON = 5;
+  GEOMETRYCOLLECTION = 6;
+}
+
+message Feature {
+  string id = 1;
+  Geometry geometry = 2;
+  google.protobuf.Struct properties = 3;
+}
+
+message Geometry {
+  GeometryType type = 1;
+}
