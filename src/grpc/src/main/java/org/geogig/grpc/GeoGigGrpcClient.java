@@ -53,6 +53,7 @@ public class GeoGigGrpcClient {
         try {
             CreateRepoResponse res = blockingStub.createRepo(req);
             logger.info("newly created repo name: " + res.getRepoName());
+            logger.info("newly created repo location: " + res.getRepoLocation());
         } catch (StatusRuntimeException e) {
             logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
             return;
@@ -97,7 +98,7 @@ public class GeoGigGrpcClient {
     /**
      * Exports a snapshot of a GeoGig repository as a GeoPackage file for use by mobile devices.
      * <p/>
-     * {@link http://geogig.org/docs/interaction/geopackage-import-export.html#geopackage-export}
+     * {@see http://geogig.org/docs/interaction/geopackage-import-export.html#geopackage-export}
      *
      * @param repoName name of repository to export from
      * @param refSpec  branch name or commit identifier to export from

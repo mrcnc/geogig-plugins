@@ -3,29 +3,35 @@ package org.geogig.grpc;
 import io.grpc.stub.StreamObserver;
 import org.locationtech.geogig.plumbing.ResolveRepositoryName;
 import org.locationtech.geogig.porcelain.InitOp;
-import org.locationtech.geogig.repository.Context;
-import org.locationtech.geogig.repository.Repository;
-import org.locationtech.geogig.repository.RepositoryConnectionException;
-import org.locationtech.geogig.repository.RepositoryResolver;
+import org.locationtech.geogig.repository.*;
+
+import java.io.File;
+import java.net.URI;
 
 /**
  * This is where we override the methods and do the actual work of the service.
  */
 public class GeoGigService extends GeoGigServiceGrpc.GeoGigServiceImplBase {
 
-
-    public GeoGigService() {
+    private Repository getRepoByName(String repoName) {
+        URI rootRepoURI = new File(System.getProperty("user.dir")).toURI();
+        RepositoryResolver resolver = RepositoryResolver.lookup(rootRepoURI);
+        Hints hints = new Hints();
+        final URI repoURI = resolver.buildRepoURI(rootRepoURI, repoName);
+        hints.set(Hints.REPOSITORY_URL, repoURI);
+        hints.set(Hints.REPOSITORY_NAME, repoName);
+        Context context = GlobalContextBuilder.builder().build(hints);
+        return context.repository();
     }
 
     @Override
     public void createRepo(CreateRepoRequest req, StreamObserver<CreateRepoResponse> responseObserver) {
-        String repoName = req.getRepoName();
+        final String repoName = req.getRepoName();
+        Repository newRepo = getRepoByName(repoName);
 
-
-        InitOp command = geogig.command(InitOp.class);
-
-
-        Repository newRepo = command.call();
+        // call the command to create the repo
+        InitOp command = newRepo.command(InitOp.class);
+        newRepo = command.call();
 
         try {
             final String repositoryName = RepositoryResolver.load(newRepo.getLocation())
@@ -34,6 +40,7 @@ public class GeoGigService extends GeoGigServiceGrpc.GeoGigServiceImplBase {
             CreateRepoResponse res = CreateRepoResponse.newBuilder()
                     .setSuccess(true)
                     .setRepoName(repositoryName)
+                    .setRepoLocation(newRepo.getLocation().toString())
                     .build();
             responseObserver.onNext(res);
         } catch (RepositoryConnectionException e) {

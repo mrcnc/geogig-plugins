@@ -22,12 +22,12 @@ message CreateRepoRequest {
   string userName = 2;
   string userEmail = 3;
   PostgreSQLConnection connection = 4;
-  // should we also allow (or require) data import request here?  why not combine them?
 }
 message CreateRepoResponse {
   bool   success = 1;
   string repoName = 2;
-  string errorMessage = 3;
+  string repoLocation = 3;
+  string errorMessage = 4;
 }
 
 
